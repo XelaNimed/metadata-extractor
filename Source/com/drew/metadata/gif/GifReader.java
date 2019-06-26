@@ -272,7 +272,11 @@ public class GifReader
         {
             // XMP data extension
             byte[] xmpBytes = gatherBytes(reader);
-            new XmpReader().extract(xmpBytes, 0, xmpBytes.length - 257, metadata, null);
+            int xmpLengh = xmpBytes.length - 257; // Exclude the "magic trailer", see XMP Specification Part 3, 1.1.2 GIF
+            if (xmpLengh > 0) {
+                // Only extract valid blocks
+                new XmpReader().extract(xmpBytes, 0, xmpBytes.length - 257, metadata, null);
+            }
         }
         else if (extensionType.equals("ICCRGBG1012"))
         {
@@ -308,8 +312,8 @@ public class GifReader
 
         short packedFields = reader.getUInt8();
         directory.setObject(GifControlDirectory.TAG_DISPOSAL_METHOD, DisposalMethod.typeOf((packedFields >> 2) & 7));
-        directory.setBoolean(GifControlDirectory.TAG_USER_INPUT_FLAG, (packedFields & 2) >> 1 == 1 ? true : false);
-        directory.setBoolean(GifControlDirectory.TAG_TRANSPARENT_COLOR_FLAG, (packedFields & 1) == 1 ? true : false);
+        directory.setBoolean(GifControlDirectory.TAG_USER_INPUT_FLAG, (packedFields & 2) >> 1 == 1);
+        directory.setBoolean(GifControlDirectory.TAG_TRANSPARENT_COLOR_FLAG, (packedFields & 1) == 1);
         directory.setInt(GifControlDirectory.TAG_DELAY, reader.getUInt16());
         directory.setInt(GifControlDirectory.TAG_TRANSPARENT_COLOR_INDEX, reader.getUInt8());
 

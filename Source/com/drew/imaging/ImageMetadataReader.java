@@ -20,15 +20,22 @@
  */
 package com.drew.imaging;
 
+import com.drew.imaging.avi.AviMetadataReader;
 import com.drew.imaging.bmp.BmpMetadataReader;
+import com.drew.imaging.eps.EpsMetadataReader;
 import com.drew.imaging.gif.GifMetadataReader;
+import com.drew.imaging.heif.HeifMetadataReader;
 import com.drew.imaging.ico.IcoMetadataReader;
 import com.drew.imaging.jpeg.JpegMetadataReader;
+import com.drew.imaging.mp3.Mp3MetadataReader;
+import com.drew.imaging.mp4.Mp4MetadataReader;
+import com.drew.imaging.quicktime.QuickTimeMetadataReader;
 import com.drew.imaging.pcx.PcxMetadataReader;
 import com.drew.imaging.png.PngMetadataReader;
 import com.drew.imaging.psd.PsdMetadataReader;
 import com.drew.imaging.raf.RafMetadataReader;
 import com.drew.imaging.tiff.TiffMetadataReader;
+import com.drew.imaging.wav.WavMetadataReader;
 import com.drew.imaging.webp.WebpMetadataReader;
 import com.drew.lang.RandomAccessStreamReader;
 import com.drew.lang.StringUtil;
@@ -38,12 +45,15 @@ import com.drew.metadata.Metadata;
 import com.drew.metadata.MetadataException;
 import com.drew.metadata.Tag;
 import com.drew.metadata.exif.ExifIFD0Directory;
-import com.drew.metadata.file.FileMetadataReader;
+import com.drew.metadata.file.FileSystemMetadataReader;
+import com.drew.metadata.file.FileTypeDirectory;
+import com.drew.metadata.xmp.XmpDirectory;
 
 import java.io.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Map;
 
 /**
  * Reads metadata from any supported file format.
@@ -53,16 +63,21 @@ import java.util.Collection;
  * Parsing is then delegated to one of:
  *
  * <ul>
- *     <li>{@link JpegMetadataReader} for JPEG files</li>
- *     <li>{@link TiffMetadataReader} for TIFF and (most) RAW files</li>
- *     <li>{@link PsdMetadataReader} for Photoshop files</li>
- *     <li>{@link PngMetadataReader} for PNG files</li>
+ *     <li>{@link AviMetadataReader} for AVI files</li>
  *     <li>{@link BmpMetadataReader} for BMP files</li>
+ *     <li>{@link FileSystemMetadataReader} for metadata from the file system when a {@link File} is provided</li>
  *     <li>{@link GifMetadataReader} for GIF files</li>
  *     <li>{@link IcoMetadataReader} for ICO files</li>
+ *     <li>{@link JpegMetadataReader} for JPEG files</li>
+ *     <li>{@link Mp4MetadataReader} for MPEG-4 files</li>
  *     <li>{@link PcxMetadataReader} for PCX files</li>
- *     <li>{@link WebpMetadataReader} for WebP files</li>
+ *     <li>{@link PngMetadataReader} for PNG files</li>
+ *     <li>{@link PsdMetadataReader} for Photoshop files</li>
+ *     <li>{@link QuickTimeMetadataReader} for QuickTime files</li>
  *     <li>{@link RafMetadataReader} for RAF files</li>
+ *     <li>{@link TiffMetadataReader} for TIFF and (most) RAW files</li>
+ *     <li>{@link WavMetadataReader} for WAV files</li>
+ *     <li>{@link WebpMetadataReader} for WebP files</li>
  * </ul>
  *
  * If you know the file type you're working with, you may use one of the above processors directly.
@@ -107,7 +122,11 @@ public class ImageMetadataReader
 
         FileType fileType = FileTypeDetector.detectFileType(bufferedInputStream);
 
-        return readMetadata(bufferedInputStream, streamLength, fileType);
+        Metadata metadata = readMetadata(bufferedInputStream, streamLength, fileType);
+
+        metadata.addDirectory(new FileTypeDirectory(fileType));
+
+        return metadata;
     }
 
     /**
@@ -145,12 +164,28 @@ public class ImageMetadataReader
                 return IcoMetadataReader.readMetadata(inputStream);
             case Pcx:
                 return PcxMetadataReader.readMetadata(inputStream);
-            case Riff:
+            case WebP:
                 return WebpMetadataReader.readMetadata(inputStream);
             case Raf:
                 return RafMetadataReader.readMetadata(inputStream);
+            case Avi:
+                return AviMetadataReader.readMetadata(inputStream);
+            case Wav:
+                return WavMetadataReader.readMetadata(inputStream);
+            case Mov:
+                return QuickTimeMetadataReader.readMetadata(inputStream);
+            case Mp4:
+                return Mp4MetadataReader.readMetadata(inputStream);
+            case Mp3:
+                return Mp3MetadataReader.readMetadata(inputStream);
+            case Eps:
+                return EpsMetadataReader.readMetadata(inputStream);
+            case Heif:
+                return HeifMetadataReader.readMetadata(inputStream);
+            case Unknown:
+                throw new ImageProcessingException("File format could not be determined");
             default:
-                throw new ImageProcessingException("File format is not supported");
+                return new Metadata();
         }
     }
 
@@ -171,7 +206,7 @@ public class ImageMetadataReader
         } finally {
             inputStream.close();
         }
-        new FileMetadataReader().read(file, metadata);
+        new FileSystemMetadataReader().read(file, metadata);
         return metadata;
     }
 
@@ -269,6 +304,24 @@ public class ImageMetadataReader
                             System.out.printf("[%s - %s] %s = %s%n", directoryName, tag.getTagTypeHex(), tagName, description);
                         } else {
                             System.out.printf("[%s] %s = %s%n", directoryName, tagName, description);
+                        }
+                    }
+                }
+
+                if (directory instanceof XmpDirectory) {
+                    Map<String, String> xmpProperties = ((XmpDirectory)directory).getXmpProperties();
+                    for (Map.Entry<String, String> property : xmpProperties.entrySet()) {
+                        String key = property.getKey();
+                        String value = property.getValue();
+
+                        if (value != null && value.length() > 1024) {
+                            value = value.substring(0, 1024) + "...";
+                        }
+
+                        if (markdownFormat) {
+                            System.out.printf("%s||%s|%s%n", directoryName, key, value);
+                        } else {
+                            System.out.printf("[%s] %s = %s%n", directoryName, key, value);
                         }
                     }
                 }

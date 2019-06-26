@@ -18,42 +18,47 @@
  *    https://drewnoakes.com/code/exif/
  *    https://github.com/drewnoakes/metadata-extractor
  */
-package com.drew.metadata.file;
+package com.drew.metadata.heif;
 
 import com.drew.lang.annotations.NotNull;
 import com.drew.metadata.Directory;
 
 import java.util.HashMap;
 
-/**
- * @author Drew Noakes https://drewnoakes.com
- */
-@SuppressWarnings("WeakerAccess")
-public class FileMetadataDirectory extends Directory
+public class HeifDirectory extends Directory
 {
-    public static final int TAG_FILE_NAME = 1;
-    public static final int TAG_FILE_SIZE = 2;
-    public static final int TAG_FILE_MODIFIED_DATE = 3;
+    public static final int TAG_MAJOR_BRAND                             = 1;
+    public static final int TAG_MINOR_VERSION                           = 2;
+    public static final int TAG_COMPATIBLE_BRANDS                       = 3;
+
+    public static final int TAG_IMAGE_WIDTH                             = 4;
+    public static final int TAG_IMAGE_HEIGHT                            = 5;
+    public static final int TAG_IMAGE_ROTATION                          = 6;
+    public static final int TAG_BITS_PER_CHANNEL                        = 7;
 
     @NotNull
     protected static final HashMap<Integer, String> _tagNameMap = new HashMap<Integer, String>();
 
     static {
-        _tagNameMap.put(TAG_FILE_NAME, "File Name");
-        _tagNameMap.put(TAG_FILE_SIZE, "File Size");
-        _tagNameMap.put(TAG_FILE_MODIFIED_DATE, "File Modified Date");
+        _tagNameMap.put(TAG_MAJOR_BRAND, "Major Brand");
+        _tagNameMap.put(TAG_MINOR_VERSION, "Minor Version");
+        _tagNameMap.put(TAG_COMPATIBLE_BRANDS, "Compatible Brands");
+        _tagNameMap.put(TAG_IMAGE_WIDTH, "Width");
+        _tagNameMap.put(TAG_IMAGE_HEIGHT, "Height");
+        _tagNameMap.put(TAG_IMAGE_ROTATION, "Rotation");
+        _tagNameMap.put(TAG_BITS_PER_CHANNEL, "Bits Per Channel");
     }
 
-    public FileMetadataDirectory()
+    public HeifDirectory()
     {
-        this.setDescriptor(new FileMetadataDescriptor(this));
+        this.setDescriptor(new HeifDescriptor(this));
     }
 
     @Override
     @NotNull
     public String getName()
     {
-        return "File";
+        return "HEIF";
     }
 
     @Override

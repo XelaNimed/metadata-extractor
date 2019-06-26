@@ -18,32 +18,44 @@
  *    https://drewnoakes.com/code/exif/
  *    https://github.com/drewnoakes/metadata-extractor
  */
-package com.drew.metadata.file;
+package com.drew.imaging.mp3;
 
 import com.drew.lang.annotations.NotNull;
 import com.drew.metadata.Metadata;
+import com.drew.metadata.file.FileSystemMetadataReader;
+import com.drew.metadata.mp3.Mp3Reader;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
-import java.util.Date;
+import java.io.InputStream;
 
-public class FileMetadataReader
+/**
+ * Obtains metadata from MP3 files.
+ *
+ * @author Payton Garland
+ */
+public class Mp3MetadataReader
 {
-    public void read(@NotNull File file, @NotNull Metadata metadata) throws IOException
+    @NotNull
+    public static Metadata readMetadata(@NotNull File file) throws IOException
     {
-        if (!file.isFile())
-            throw new IOException("File object must reference a file");
-        if (!file.exists())
-            throw new IOException("File does not exist");
-        if (!file.canRead())
-            throw new IOException("File is not readable");
+        InputStream inputStream = new FileInputStream(file);
+        Metadata metadata;
+        try {
+            metadata = readMetadata(inputStream);
+        } finally {
+            inputStream.close();
+        }
+        new FileSystemMetadataReader().read(file, metadata);
+        return metadata;
+    }
 
-        FileMetadataDirectory directory = new FileMetadataDirectory();
-
-        directory.setString(FileMetadataDirectory.TAG_FILE_NAME, file.getName());
-        directory.setLong(FileMetadataDirectory.TAG_FILE_SIZE, file.length());
-        directory.setDate(FileMetadataDirectory.TAG_FILE_MODIFIED_DATE, new Date(file.lastModified()));
-
-        metadata.addDirectory(directory);
+    @NotNull
+    public static Metadata readMetadata(@NotNull InputStream inputStream)
+    {
+        Metadata metadata = new Metadata();
+        new Mp3Reader().extract(inputStream, metadata);
+        return metadata;
     }
 }
